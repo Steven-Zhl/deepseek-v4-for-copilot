@@ -43,7 +43,7 @@ const zh: Translations = {
 
 	// Vision
 	'vision.vendorLabel': '提供商：{0}',
-	'vision.noModel': '当前环境中无可用的语言模型。',
+	'vision.noModel': '当前环境中没有可用的非 DeepSeek 视觉代理模型。',
 	'vision.pickPlaceholder': '选择用于描述图片的模型 (默认 {0})',
 	'vision.current': '当前',
 	'vision.proxyUsing': '视觉代理：{0}',
@@ -86,7 +86,7 @@ const en: Translations = {
 	// NOTE: vision.unableToDescribe has been moved to consts.ts as
 	// IMAGE_DESCRIPTION_UNAVAILABLE — it is prompt content, not UI text.
 	'vision.vendorLabel': 'vendor: {0}',
-	'vision.noModel': 'No language models available in the current environment',
+	'vision.noModel': 'No non-DeepSeek vision proxy models are available in the current environment',
 	'vision.pickPlaceholder': 'Select a model for image description (default: {0})',
 	'vision.current': 'Current',
 	'vision.proxyUsing': 'Vision proxy: {0}',
