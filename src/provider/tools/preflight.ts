@@ -1,5 +1,9 @@
+import { createHash } from 'crypto';
 import vscode from 'vscode';
 import { ACTIVATE_TOOL_PREFIX, PREFLIGHT_ACTIVATE_CALL_ID_PREFIX } from './consts';
+
+const PREFLIGHT_TOOL_NAME_HASH_LENGTH = 32;
+const PREFLIGHT_CALL_ID_SEPARATOR = '_';
 
 export interface ActivatePreflightInspection {
 	rounds: number;
@@ -64,7 +68,12 @@ export function filterPreflightControlFlow(
 }
 
 export function createPreflightToolCallId(round: number, toolName: string): string {
-	return `${PREFLIGHT_ACTIVATE_CALL_ID_PREFIX}${round}:${encodeURIComponent(toolName)}`;
+	// Keep IDs short and within the conservative alnum/_ set for cross-provider replay.
+	const toolNameHash = createHash('sha256')
+		.update(toolName)
+		.digest('hex')
+		.slice(0, PREFLIGHT_TOOL_NAME_HASH_LENGTH);
+	return `${PREFLIGHT_ACTIVATE_CALL_ID_PREFIX}${round}${PREFLIGHT_CALL_ID_SEPARATOR}${toolNameHash}`;
 }
 
 function collectActivateToolNames(
@@ -109,7 +118,14 @@ function isHumanUserMessagePart(part: unknown): boolean {
 
 function parsePreflightPart(part: unknown): { round: number; toolName?: string } | undefined {
 	if (part instanceof vscode.LanguageModelToolCallPart) {
-		return parsePreflightToolCallId(part.callId) ?? undefined;
+		const parsed = parsePreflightToolCallId(part.callId);
+		if (!parsed) {
+			return undefined;
+		}
+		return {
+			round: parsed.round,
+			toolName: part.name,
+		};
 	}
 	if (part instanceof vscode.LanguageModelToolResultPart) {
 		return parsePreflightToolCallId(part.callId) ?? undefined;
@@ -129,15 +145,13 @@ function isEmptyTextPart(part: unknown): boolean {
 	return part instanceof vscode.LanguageModelTextPart && part.value.length === 0;
 }
 
-function parsePreflightToolCallId(
-	callId: string,
-): { round: number; toolName?: string } | undefined {
+function parsePreflightToolCallId(callId: string): { round: number } | undefined {
 	if (!callId.startsWith(PREFLIGHT_ACTIVATE_CALL_ID_PREFIX)) {
 		return undefined;
 	}
 
 	const value = callId.slice(PREFLIGHT_ACTIVATE_CALL_ID_PREFIX.length);
-	const separatorIndex = value.indexOf(':');
+	const separatorIndex = value.indexOf(PREFLIGHT_CALL_ID_SEPARATOR);
 	if (separatorIndex < 0) {
 		return undefined;
 	}
@@ -147,9 +161,5 @@ function parsePreflightToolCallId(
 		return undefined;
 	}
 
-	try {
-		return { round, toolName: decodeURIComponent(value.slice(separatorIndex + 1)) };
-	} catch {
-		return { round };
-	}
+	return { round };
 }
